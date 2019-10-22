@@ -6,7 +6,7 @@
 
 ## Why not use the official container?
 
-It does not work on Kubernetes with a configmap since it tries to create the database.db, state.json etc in the directory where the config is mounted.
+It has no arm64 support, this project might make it back upstream :)
 This container allows this setup to work flawlessly!
 
 ## Test container with docker-compose
