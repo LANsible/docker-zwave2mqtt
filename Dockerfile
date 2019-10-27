@@ -102,9 +102,9 @@ COPY --from=builder \
 
 # Copy zwave2mqtt binary and stupid dynamic @serialport
 COPY --from=builder /zwave2mqtt/zwave2mqtt /zwave2mqtt/zwave2mqtt
-# COPY --from=builder \
-#   /zwave2mqtt/node_modules/zigbee-herdsman/node_modules/@serialport/bindings/ \
-#   /zwave2mqtt/node_modules/zigbee-herdsman/node_modules/@serialport/bindings/
+COPY --from=builder \
+  /zwave2mqtt/node_modules/@serialport/bindings/ \
+  /zwave2mqtt/node_modules/@serialport/bindings/
 
 # # Adds entrypoint
 # COPY ./entrypoint.sh /entrypoint.sh
