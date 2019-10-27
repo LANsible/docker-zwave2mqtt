@@ -63,7 +63,7 @@ WORKDIR /zwave2mqtt
 RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
   export MAKEFLAGS="-j$((CORES+1)) -l${CORES}"; \
   npm install --unsafe-perm && \
-  npm install --unsafe-perm --global nexe
+  npm install --unsafe-perm --global nexe && \
   nexe \
   --build \
   --empty \
