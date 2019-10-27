@@ -1,89 +1,114 @@
-# ----------------
-# STEP 1:
-# https://lobradov.github.io/Building-docker-multiarch-images/
-# Build Openzwave and Zwave2Mqtt pkg
-# All result files will be put in /dist folder
-FROM node:carbon-alpine AS build
+FROM alpine:3.10 as builder
 
-# Set the commit of Zwave2Mqtt to checkout when cloning the repo
-ENV Z2M_VERSION=fd2aa6e67bb7c4bee75babd83fc1b5369145b6bf
+ARG VERSION=master
+
+LABEL maintainer="wilmardo" \
+  description="zwave2mqtt from scratch"
+
+RUN addgroup -S -g 1000 zwave2mqtt 2>/dev/null && \
+  adduser -S -u 1000 -D -H -h /dev/shm -s /sbin/nologin -G zwave2mqtt -g zwave2mqtt zwave2mqtt 2>/dev/null && \
+  addgroup zwave2mqtt dialout
 
 # Install required dependencies
-RUN apk update && apk --no-cache add \
-      gnutls \
-      gnutls-dev \
-      libusb \
-      eudev \
-      # Install build dependencies
-    && apk --no-cache --virtual .build-deps add \
-      coreutils \
-      eudev-dev \
-      build-base \
-      git \
-      python \
-      bash \
-      libusb-dev \
-      linux-headers \
-      wget \
-      tar  \
-      openssl \
-      make 
+RUN apk --no-cache add \
+    git \
+    python \
+    make \
+    build-base \
+    linux-headers \
+    eudev-dev \
+    libusb-dev \
+    coreutils \
+    npm \
+    upx
 
-# Clone 1.4 branch and move binaries in /dist/lib and devices db on /dist/db
-RUN cd /root \
-    && git clone -b 1.4 https://github.com/OpenZWave/open-zwave.git \
-    && cd open-zwave && make && make install \
+# # Install required dependencies
+# RUN apk update && apk --no-cache add \
+#       gnutls \
+#       gnutls-dev \
+#       libusb \
+#       eudev \
+#       # Install build dependencies
+#     && apk --no-cache --virtual .build-deps add \
+#       coreutils \
+#       eudev-dev \
+#       build-base \
+#       git \
+#       python \
+#       bash \
+#       libusb-dev \
+#       linux-headers \
+#       wget \
+#       tar  \
+#       openssl \
+#       make 
+
+
+RUN git clone --depth 1 --single-branch --branch ${VERSION} https://github.com/OpenZWave/Zwave2Mqtt.git /zwave2mqtt
+RUN git clone --depth 1 --single-branch --branch master https://github.com/OpenZWave/open-zwave.git /open-zwave
+ADD http://old.openzwave.com/downloads/openzwave-1.4.1.tar.gz /
+
+# Makeflags source: https://math-linux.com/linux/tip-of-the-day/article/speedup-gnu-make-build-and-compilation-process
+RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
+    export MAKEFLAGS="-j$((CORES+1)) -l${CORES}"; \
+    tar zxvf openzwave-*.gz \
+    && cd openzwave-* && make && make install \
     && mkdir -p /dist/lib \
-    && mv libopenzwave.so* /dist/lib/ \
-    && mkdir -p /dist/db \
-    && mv config/* /dist/db
+    && mv libopenzwave.so* /usr/lib
 
-COPY bin/package.sh /root/package.sh
+WORKDIR /zwave2mqtt
 
-# Clone Zwave2Mqtt build pkg files and move them to /dist/pkg
-RUN npm config set unsafe-perm true && npm install -g pkg@4.3.8 \
-    && cd /root \
-    && git clone https://github.com/OpenZWave/Zwave2Mqtt.git  \
-    && cd Zwave2Mqtt \
-    && git checkout ${Z2M_VERSION} \
-    && npm install \
-    && npm run build
+# NOTE(wilmardo): --build is needed for dynamic require that serialport/bindings seems to use
+# NOTE(wilmardo): For the upx steps and why --empty see: https://github.com/nexe/nexe/issues/366
+RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
+  export MAKEFLAGS="-j$((CORES+1)) -l${CORES}"; \
+  npm install --unsafe-perm && \
+  npm install --unsafe-perm --global nexe
+  nexe \
+  --build \
+  --empty \
+  --output zwave2mqtt app.js && \
+  upx --best /root/.nexe/*/out/Release/node && \
+  nexe \
+  --build \
+  --output zwave2mqtt app.js
 
-RUN cd /root \
-    && chmod +x package.sh && ./package.sh \
-    && mkdir -p /dist/pkg \
-    && mv /root/Zwave2Mqtt/pkg/* /dist/pkg
-
-# Clean up
-RUN rm -R /root/* && apk del .build-deps
-
-# ----------------
-# STEP 2:
-# Run a minimal alpine image
 FROM alpine:latest
 
-LABEL maintainer="robertsLando"
+# LABEL maintainer="robertsLando"
 
-RUN apk update && apk add --no-cache \
-    libstdc++  \
-    libgcc \
-    libusb \
-    tzdata \
-    eudev 
+# udevadm binary is used by zwave2mqtt
+COPY --from=builder \
+  /bin/udevadm \
+  /bin/
 
-# Copy files from previous build stage
-COPY --from=build /dist/lib/ /lib/
-COPY --from=build /dist/db/ /usr/local/etc/openzwave/ 
-COPY --from=build /dist/pkg /usr/src/app
+# Copy users from builder
+COPY --from=builder \
+  /etc/passwd \
+  /etc/group \
+  /etc/
 
-# Set enviroment
-ENV LD_LIBRARY_PATH /lib
+# Copy needed libs
+COPY --from=builder \
+  /lib/ld-musl-*.so.1 \
+  /lib/libc.musl-*.so.1 \
+  /lib/
+COPY --from=builder \
+  /usr/lib/libstdc++.so.6 \
+  /usr/lib/libgcc_s.so.1 \
+  /usr/lib/
 
-WORKDIR /usr/src/app
+# Copy config for openzwaves    
 
-EXPOSE 8091
+# Copy zwave2mqtt binary and stupid dynamic @serialport
+COPY --from=builder /zwave2mqtt/zwave2mqtt /zwave2mqtt/zwave2mqtt
+# COPY --from=builder \
+#   /zwave2mqtt/node_modules/zigbee-herdsman/node_modules/@serialport/bindings/ \
+#   /zwave2mqtt/node_modules/zigbee-herdsman/node_modules/@serialport/bindings/
 
-# Override default alpine entrypoint
-ENTRYPOINT [""]
+# # Adds entrypoint
+# COPY ./entrypoint.sh /entrypoint.sh
 
-CMD ["/usr/src/app/zwave2mqtt"]
+USER zwave2mqtt
+WORKDIR /zwave2mqtt
+ENTRYPOINT ["./zwave2mqtt" ]
