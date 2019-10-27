@@ -3,10 +3,10 @@
 # https://lobradov.github.io/Building-docker-multiarch-images/
 # Build Openzwave and Zwave2Mqtt pkg
 # All result files will be put in /dist folder
-FROM node:8.15.1-alpine AS build
+FROM node:carbon-alpine AS build
 
 # Set the commit of Zwave2Mqtt to checkout when cloning the repo
-ENV Z2M_VERSION=9cc3740740b57f1e896139b5ffdb25be7576ad58
+ENV Z2M_VERSION=fd2aa6e67bb7c4bee75babd83fc1b5369145b6bf
 
 # Install required dependencies
 RUN apk update && apk --no-cache add \
@@ -29,16 +29,19 @@ RUN apk update && apk --no-cache add \
       openssl \
       make 
 
-# Build binaries and move them to /dist/lib
+# Clone 1.4 branch and move binaries in /dist/lib and devices db on /dist/db
 RUN cd /root \
-    && wget http://old.openzwave.com/downloads/openzwave-1.4.1.tar.gz \
-    && tar zxvf openzwave-*.gz \
-    && cd openzwave-* && make && make install \
+    && git clone -b 1.4 https://github.com/OpenZWave/open-zwave.git \
+    && cd open-zwave && make && make install \
     && mkdir -p /dist/lib \
-    && mv libopenzwave.so* /dist/lib/
+    && mv libopenzwave.so* /dist/lib/ \
+    && mkdir -p /dist/db \
+    && mv config/* /dist/db
+
+COPY bin/package.sh /root/package.sh
 
 # Clone Zwave2Mqtt build pkg files and move them to /dist/pkg
-RUN npm config set unsafe-perm true && npm install -g pkg \
+RUN npm config set unsafe-perm true && npm install -g pkg@4.3.8 \
     && cd /root \
     && git clone https://github.com/OpenZWave/Zwave2Mqtt.git  \
     && cd Zwave2Mqtt \
@@ -46,17 +49,10 @@ RUN npm config set unsafe-perm true && npm install -g pkg \
     && npm install \
     && npm run build
 
-RUN cd /root/Zwave2Mqtt \
+RUN cd /root \
     && chmod +x package.sh && ./package.sh \
     && mkdir -p /dist/pkg \
     && mv /root/Zwave2Mqtt/pkg/* /dist/pkg
-
-# Get last config DB from main repo and move files to /dist/db
-RUN cd /root \
-    && git clone https://github.com/OpenZWave/open-zwave.git \
-    && cd open-zwave \
-    && mkdir -p /dist/db \
-    && mv config/* /dist/db
 
 # Clean up
 RUN rm -R /root/* && apk del .build-deps
@@ -72,6 +68,7 @@ RUN apk update && apk add --no-cache \
     libstdc++  \
     libgcc \
     libusb \
+    tzdata \
     eudev 
 
 # Copy files from previous build stage
@@ -85,5 +82,8 @@ ENV LD_LIBRARY_PATH /lib
 WORKDIR /usr/src/app
 
 EXPOSE 8091
+
+# Override default alpine entrypoint
+ENTRYPOINT [""]
 
 CMD ["/usr/src/app/zwave2mqtt"]
