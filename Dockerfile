@@ -38,8 +38,6 @@ RUN cd /root \
     && mkdir -p /dist/db \
     && mv config/* /dist/db
 
-COPY bin/package.sh /root/package.sh
-
 # Clone Zwave2Mqtt build pkg files and move them to /dist/pkg
 RUN npm config set unsafe-perm true && npm install -g pkg@4.3.8 \
     && cd /root \
@@ -50,6 +48,7 @@ RUN npm config set unsafe-perm true && npm install -g pkg@4.3.8 \
     && npm run build
 
 RUN cd /root \
+    && mv ../Zwave2Mqtt/bin/package.sh . \
     && chmod +x package.sh && ./package.sh \
     && mkdir -p /dist/pkg \
     && mv /root/Zwave2Mqtt/pkg/* /dist/pkg
