@@ -48,7 +48,7 @@ RUN npm config set unsafe-perm true && npm install -g pkg@4.3.8 \
     && npm run build
 
 RUN cd /root \
-    && mv ../Zwave2Mqtt/bin/package.sh . \
+    && mv /root/Zwave2Mqtt/package.sh . \
     && chmod +x package.sh && ./package.sh \
     && mkdir -p /dist/pkg \
     && mv /root/Zwave2Mqtt/pkg/* /dist/pkg
