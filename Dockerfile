@@ -1,4 +1,4 @@
-FROM robertslando/zwave2mqtt as upstream
+FROM robertslando/zwave2mqtt:latest as upstream
 
 ARG VERSION=master
 
