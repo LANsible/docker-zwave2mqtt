@@ -38,6 +38,7 @@ steps:
     repo: lansible/zwave2mqtt
     build_args:
     - VERSION=${DRONE_TAG:-master}
+    - UPSTREAM_TAG=arm64v8-latest
     tags: ${DRONE_TAG:-master}-arm64
 
 ---

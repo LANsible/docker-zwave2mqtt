@@ -1,4 +1,5 @@
-FROM robertslando/zwave2mqtt:latest as upstream
+ARG UPSTREAM_TAG=amd64-latest
+FROM robertslando/zwave2mqtt:${UPSTREAM_TAG} as upstream
 
 ARG VERSION=master
 
