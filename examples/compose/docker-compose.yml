@@ -5,7 +5,9 @@
       container_name: zwave2mqtt
       image: lansible/zwave2mqtt
       volumes:
-        - ./store:/usr/src/app/store
+        - ./config:/config
+        - ./config:/config
+
       devices:
         - /dev/ttyACM0:/dev/ttyACM0
       restart: always

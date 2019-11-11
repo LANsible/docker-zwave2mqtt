@@ -1,88 +1,55 @@
-# ----------------
-# STEP 1:
-# https://lobradov.github.io/Building-docker-multiarch-images/
-# Build Openzwave and Zwave2Mqtt pkg
-# All result files will be put in /dist folder
-FROM node:carbon-alpine AS build
+FROM robertslando/zwave2mqtt as upstream
 
-# Set the commit of Zwave2Mqtt to checkout when cloning the repo
-ENV Z2M_VERSION=fd2aa6e67bb7c4bee75babd83fc1b5369145b6bf
+ARG VERSION=master
 
-# Install required dependencies
-RUN apk update && apk --no-cache add \
-      gnutls \
-      gnutls-dev \
-      libusb \
-      eudev \
-      # Install build dependencies
-    && apk --no-cache --virtual .build-deps add \
-      coreutils \
-      eudev-dev \
-      build-base \
-      git \
-      python \
-      bash \
-      libusb-dev \
-      linux-headers \
-      wget \
-      tar  \
-      openssl \
-      make 
+RUN addgroup -S -g 1000 zwave2mqtt 2>/dev/null && \
+  adduser -S -u 1000 -D -H -h /dev/shm -s /sbin/nologin -G zwave2mqtt -g zwave2mqtt zwave2mqtt 2>/dev/null && \
+  addgroup zwave2mqtt dialout
 
-# Clone 1.4 branch and move binaries in /dist/lib and devices db on /dist/db
-RUN cd /root \
-    && git clone -b 1.4 https://github.com/OpenZWave/open-zwave.git \
-    && cd open-zwave && make && make install \
-    && mkdir -p /dist/lib \
-    && mv libopenzwave.so* /dist/lib/ \
-    && mkdir -p /dist/db \
-    && mv config/* /dist/db
-
-# Clone Zwave2Mqtt build pkg files and move them to /dist/pkg
-RUN npm config set unsafe-perm true && npm install -g pkg@4.3.8 \
-    && cd /root \
-    && git clone https://github.com/OpenZWave/Zwave2Mqtt.git  \
-    && cd Zwave2Mqtt \
-    && git checkout ${Z2M_VERSION} \
-    && npm install \
-    && npm run build
-
-RUN cd /root \
-    && mv /root/Zwave2Mqtt/package.sh . \
-    && chmod +x package.sh && ./package.sh \
-    && mkdir -p /dist/pkg \
-    && mv /root/Zwave2Mqtt/pkg/* /dist/pkg
-
-# Clean up
-RUN rm -R /root/* && apk del .build-deps
+# Remove directory used for persistance
+RUN rm -rf /usr/src/app/store
 
 # ----------------
 # STEP 2:
-# Run a minimal alpine image
-FROM alpine:latest
+# Run a scratch image
+FROM scratch
 
-LABEL maintainer="robertsLando"
+# Copy users from upstream
+COPY --from=upstream \
+  /etc/passwd \
+  /etc/group \
+  /etc/
 
-RUN apk update && apk add --no-cache \
-    libstdc++  \
-    libgcc \
-    libusb \
-    tzdata \
-    eudev 
+# udevadm comes from the needed eudev package
+COPY --from=upstream \
+  /bin/busybox \
+  /bin/udevadm \
+  /bin/
 
-# Copy files from previous build stage
-COPY --from=build /dist/lib/ /lib/
-COPY --from=build /dist/db/ /usr/local/etc/openzwave/ 
-COPY --from=build /dist/pkg /usr/src/app
+# Copy needed libs
+COPY --from=upstream \
+  /lib/ld-musl-*.so.1 \
+  /lib/libc.musl-*.so.1 \
+  /lib/libopenzwave.so.1.4 \
+  /lib/libudev.so.1 \
+  /lib/
+COPY --from=upstream \
+  /usr/lib/libstdc++.so.6 \
+  /usr/lib/libgcc_s.so.1 \
+  /usr/lib/
 
-# Set enviroment
-ENV LD_LIBRARY_PATH /lib
+# Copy files from upstream
+COPY --from=upstream /usr/local/etc/openzwave/ /usr/local/etc/openzwave/ 
+COPY --from=upstream /usr/src/app /usr/src/app
 
+# Create symlink for persistance
+RUN ["/bin/busybox", "ln", "-sf", "/data", "/usr/src/app/store"]
+
+# Copy entrypoint
+COPY entrypoint.sh /entrypoint.sh
+
+USER zwave2mqtt
+ENTRYPOINT ["/bin/busybox", "ash", "/entrypoint.sh" ]
 WORKDIR /usr/src/app
-
-EXPOSE 8091
-
-# Override default alpine entrypoint
-ENTRYPOINT [""]
-
 CMD ["/usr/src/app/zwave2mqtt"]
+EXPOSE 8091
