@@ -27,10 +27,11 @@ COPY --from=upstream \
   /bin/
 
 # Copy needed libs
+# libopenzwave needs to have the version!
 COPY --from=upstream \
   /lib/ld-musl-*.so.1 \
   /lib/libc.musl-*.so.1 \
-  /lib/libopenzwave.so.1.4 \
+  /lib/libopenzwave.so.1.* \
   /lib/libudev.so.1 \
   /lib/
 COPY --from=upstream \
