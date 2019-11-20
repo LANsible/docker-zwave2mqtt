@@ -1,14 +1,26 @@
 ---
-  version: "3"
-  services:
-    zwave2mqtt:
-      container_name: zwave2mqtt
-      image: lansible/zwave2mqtt
-      volumes:
-        - ./config:/config
-        - ./config:/config
+version: "3"
+services:
+  volumes-provisioner:
+    image: hasnat/volumes-provisioner
+    environment:
+      PROVISION_DIRECTORIES: "1000:1000:0755:/data"
+    volumes:
+      - data:/data
 
-      devices:
-        - /dev/ttyACM0:/dev/ttyACM0
-      restart: always
-      network_mode: host
+  zwave2mqtt:
+    container_name: zwave2mqtt
+    image: lansible/zwave2mqtt:latest
+    depends_on:
+      - volumes-provisioner
+    ports:
+      - "8091:8091"
+    volumes:
+      - ./config:/config
+      - data:/data
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
+    restart: always
+
+volumes:
+  data:

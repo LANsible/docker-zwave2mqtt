@@ -1,0 +1,67 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zwave2mqtt
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zwave2mqtt
+  labels:
+    app: zwave2mqtt
+spec:
+  replicas: 1
+  serviceName: zwave2mqtt
+  selector:
+    matchLabels:
+      app: zwave2mqtt
+  template:
+    metadata:
+      labels:
+        app: zwave2mqtt
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: device
+                  operator: In
+                  values:
+                    - zwave-usb
+      serviceAccountName: zwave2mqtt
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - image: lansible/zwave2mqtt:2.0.6
+          imagePullPolicy: IfNotPresent
+          name: zwave2mqtt
+          # Needed to read the tty device on the host
+          # Related: https://github.com/kubernetes/kubernetes/issues/60748
+          securityContext:
+            privileged: true
+          ports:
+            - containerPort: 8091
+              name: dash
+          env:
+            - name: TZ
+              value: Europe/Amsterdam
+          volumeMounts:
+            - name: zwave2mqtt-config
+              mountPath: /config
+            - name: zwave2mqtt-data
+              mountPath: /usr/src/app/store
+            - name: zwave-usb
+              mountPath: /dev/ttyACM0
+      volumes:
+        - name: zwave2mqtt-config
+          configMap:
+            name: zwave2mqtt-config
+        - name: zwave2mqtt-data
+          hostPath:
+            path: /data/automating-zwave2mqtt-data
+        - name: zwave-usb
+          hostPath:
+            path: /dev/serial/by-id/usb-0658_0200-if00
+            type: CharDevice
