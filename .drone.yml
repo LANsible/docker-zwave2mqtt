@@ -16,7 +16,8 @@ steps:
       from_secret: DOCKER_PASSWORD
     repo: lansible/zwave2mqtt
     build_args:
-    - VERSION=${DRONE_TAG:-master}
+    - ARCH=amd64
+    - VERSION=${DRONE_TAG:-2.0.6-dev}
     tags: ${DRONE_TAG:-master}-amd64
 
 ---
@@ -37,8 +38,8 @@ steps:
       from_secret: DOCKER_PASSWORD
     repo: lansible/zwave2mqtt
     build_args:
-    - VERSION=${DRONE_TAG:-master}
-    - UPSTREAM_TAG=arm64v8-latest
+    - ARCH=arm64v8
+    - VERSION=${DRONE_TAG:-2.0.6-dev}
     tags: ${DRONE_TAG:-master}-arm64
 
 ---

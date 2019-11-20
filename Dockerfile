@@ -1,7 +1,6 @@
-ARG UPSTREAM_TAG=amd64-latest
-FROM robertslando/zwave2mqtt:${UPSTREAM_TAG} as upstream
-
-ARG VERSION=master
+ARG ARCH=amd64
+ARG VERSION=2.0.6-dev
+FROM robertslando/zwave2mqtt:${ARCH}-${VERSION} as upstream
 
 RUN addgroup -S -g 1000 zwave2mqtt 2>/dev/null && \
   adduser -S -u 1000 -D -H -h /dev/shm -s /sbin/nologin -G zwave2mqtt -g zwave2mqtt zwave2mqtt 2>/dev/null && \
