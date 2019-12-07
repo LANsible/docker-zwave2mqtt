@@ -2,9 +2,8 @@ ARG ARCH=amd64
 ARG VERSION=2.0.6-dev
 FROM robertslando/zwave2mqtt:${ARCH}-${VERSION} as upstream
 
-RUN addgroup -S -g 1000 zwave2mqtt 2>/dev/null && \
-  adduser -S -u 1000 -D -H -h /dev/shm -s /sbin/nologin -G zwave2mqtt -g zwave2mqtt zwave2mqtt 2>/dev/null && \
-  addgroup zwave2mqtt dialout
+# Add unprivileged user
+RUN echo "zwave2mqtt:x:1000:1000:zwave2mqtt:/:" > /etc_passwd
 
 # Remove directory used for persistance
 RUN rm -rf /usr/src/app/store
@@ -14,11 +13,8 @@ RUN rm -rf /usr/src/app/store
 # Run a scratch image
 FROM scratch
 
-# Copy users from upstream
-COPY --from=upstream \
-  /etc/passwd \
-  /etc/group \
-  /etc/
+# Copy the unprivileged user
+COPY --from=builder /etc_passwd /etc/passwd
 
 # udevadm comes from the needed eudev package
 COPY --from=upstream \
