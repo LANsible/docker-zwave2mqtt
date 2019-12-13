@@ -36,7 +36,7 @@ COPY --from=upstream \
   /usr/lib/
 
 # Copy files from upstream
-COPY --from=upstream /usr/local/etc/openzwave/ /usr/local/etc/openzwave/ 
+COPY --from=upstream /usr/local/etc/openzwave/ /usr/local/etc/openzwave/
 COPY --from=upstream /usr/src/app /usr/src/app
 
 # Create symlink for persistance
