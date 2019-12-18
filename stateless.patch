@@ -1,0 +1,35 @@
+diff --git a/config/app.js b/config/app.js
+index 3d7ce88..25a3a7d 100644
+--- a/config/app.js
++++ b/config/app.js
+@@ -1,5 +1,5 @@
+ // config/app.js
+ module.exports = {
+-	'storeDir': 'store',
++	'storeDir': '/data',
+ 	'port': 8091
+ };
+diff --git a/config/store.js b/config/store.js
+index 1b07fd4..be0729d 100644
+--- a/config/store.js
++++ b/config/store.js
+@@ -1,6 +1,6 @@
+ // config/store.js
+ module.exports = {
+-	'settings' : {file: 'settings.json', default: {}} ,
++	'settings' : {file: '/config/settings.json', default: {}} ,
+ 	'scenes' : {file: 'scenes.json', default: []} ,
+ 	'nodes' : {file: 'nodes.json', default: []}
+ };
+diff --git a/lib/utils.js b/lib/utils.js
+index 1a42c58..0061a27 100644
+--- a/lib/utils.js
++++ b/lib/utils.js
+@@ -9,6 +9,6 @@ module.exports = {
+   },
+   joinPath (...paths) {
+     if (paths.length > 0 && typeof paths[0] === 'boolean') paths[0] = this.getPath(paths[0])
+-    return path.join(...paths)
++    return path.resolve(...paths)
+   }
+ }
