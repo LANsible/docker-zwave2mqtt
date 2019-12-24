@@ -1,16 +1,15 @@
-# syntax=docker/dockerfile:experimental
-
-
+ARG ARCHITECTURE
 #######################################################################################################################
 # Openzwave build
 #######################################################################################################################
-FROM lansible/nexe:dev as openzwave-builder
+FROM multiarch/alpine:${ARCHITECTURE}-v3.10 as openzwave-builder
 
 # See old.openzwave.com/downloads/ for latest
 ENV VERSION=1.6.992
 
 # coreutils: needed for openzwave compile
 RUN apk --no-cache add \
+  build-base \
   coreutils
 
 # Setup OpenZwave
@@ -30,14 +29,13 @@ RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
 #######################################################################################################################
 # Nexe packaging of binary
 #######################################################################################################################
-FROM lansible/nexe:dev as builder
+FROM lansible/nexe:master-${ARCHITECTURE} as builder
 
 ENV VERSION=2.0.6
 
 # Add unprivileged user
 RUN echo "zwave2mqtt:x:1000:1000:zwave2mqtt:/:" > /etc_passwd
 
-# coreutils: needed for openzwave compile
 # eudev: needed for udevadm binary
 RUN apk --no-cache add \
   eudev
@@ -66,7 +64,6 @@ COPY --from=openzwave-builder \
 # Run build to make all html files
 RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
   export MAKEFLAGS="-j$((CORES+1)) -l${CORES}"; \
-  npm config set unsafe-perm true && \
   npm install serialport@8.0.5 --save && \
   npm install -g @zeit/ncc && \
   npm install && \
@@ -74,17 +71,23 @@ RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
   npm run build
 
 # Package the binary
+# Create /data to copy into final stage
 RUN nexe --build --target alpine \
   --resource lib \
   --resource config \
   --resource hass \
-  --output zwave2mqtt app.js
+  --output zwave2mqtt app.js && \
+  mkdir /data
 
 
 #######################################################################################################################
 # Final scratch image
 #######################################################################################################################
 FROM scratch
+
+# Set env vars for persitance
+ENV ZWAVE2MQTT_CONFIG=/config/configuration.yaml \
+    ZWAVE2MQTT_DATA=/data
 
 # Add description
 LABEL org.label-schema.description="Zwave2MQTT as single binary in a scratch container"
@@ -117,17 +120,10 @@ COPY --from=builder /zwave2mqtt/zwave2mqtt /zwave2mqtt/zwave2mqtt
 # Copy openzwave definitions (location defined in settings.json)
 COPY --from=openzwave-builder /usr/local/etc/openzwave/ /usr/local/etc/openzwave/
 
-# Add bindings module needed for serialport
+# Add bindings.node for serialport
 COPY --from=builder \
   /zwave2mqtt/node_modules/@serialport/bindings/build/Release/bindings.node \
   /zwave2mqtt/build/bindings.node
-
-# Symlink bindings to directory for @serialport
-# NOTE: don't try to remove one, both files need to be present
-RUN --mount=from=builder,source=/bin/busybox.static,target=/bin/busybox.static \
-  ["/bin/busybox.static", "mkdir", "-p", "/zwave2mqtt/node_modules/@serialport/bindings/build/"]
-RUN --mount=from=builder,source=/bin/busybox.static,target=/bin/busybox.static ["/bin/busybox.static", \
-  "ln", "-sf", "/zwave2mqtt/build/bindings.node", "/zwave2mqtt/node_modules/@serialport/bindings/build/bindings.node"]
 
 # Add openzwave-shared module
 COPY --from=builder \
@@ -136,8 +132,7 @@ COPY --from=builder \
 
 # Create default data directory
 # Will fail at runtime due missing the mkdir binary
-RUN --mount=from=builder,source=/bin/busybox.static,target=/bin/busybox.static \
-  ["/bin/busybox.static", "mkdir", "/data"]
+COPY --from=builder /data /data
 
 # Add example config
 COPY examples/compose/config/settings.json /config/settings.json
