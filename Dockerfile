@@ -111,11 +111,11 @@ RUN nexe --build --target alpine \
 # # Copy linker to be able to use them (lib/ld-musl)
 # # Can't be fullly static since @serialport uses a C++ node addon
 # # https://github.com/serialport/node-serialport/blob/master/packages/bindings/lib/linux.js#L2
+# COPY --from=builder /lib/ld-musl-*.so.1 /lib/
 # COPY --from=builder \
-#   /lib/ld-musl-*.so.* \
-#   /usr/lib/libstdc++.so.* \
-#   /usr/lib/libgcc_s.so.* \
-#   /lib/
+#   /usr/lib/libstdc++.so.6.* \
+#   /usr/lib/libgcc_s.so.1 \
+#   /usr/lib/
 
 # # Adds openzwave library
 # # libopenzwave needs to have the .1.* version!
@@ -143,8 +143,8 @@ RUN nexe --build --target alpine \
 # # Will fail at runtime due missing the mkdir binary
 # COPY --from=builder /data /data
 
-# # Add example config
-# COPY examples/compose/config/settings.json /config/settings.json
+# # Add example config, also create the /config dir
+# COPY examples/compose/config/settings.json ${ZWAVE2MQTT_CONFIG}
 
 # USER zwave2mqtt
 # WORKDIR /zwave2mqtt
