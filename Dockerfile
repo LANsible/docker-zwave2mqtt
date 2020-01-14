@@ -2,7 +2,7 @@ ARG ARCHITECTURE
 #######################################################################################################################
 # Openzwave build
 #######################################################################################################################
-FROM multiarch/alpine:${ARCHITECTURE}-v3.10 as openzwave-builder
+FROM multiarch/alpine:${ARCHITECTURE}-v3.11 as openzwave-builder
 
 # See old.openzwave.com/downloads/ for latest
 ENV VERSION=1.6.992
@@ -29,9 +29,9 @@ RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
 #######################################################################################################################
 # Nexe packaging of binary
 #######################################################################################################################
-FROM lansible/nexe:master-${ARCHITECTURE} as builder
+FROM lansible/nexe:4.0.0-beta.3-${ARCHITECTURE} as builder
 
-ENV VERSION=2.0.6
+ENV VERSION=2.1.0
 
 # Add unprivileged user
 RUN echo "zwave2mqtt:x:1000:1000:zwave2mqtt:/:" > /etc_passwd
@@ -59,13 +59,10 @@ COPY --from=openzwave-builder \
   /usr/local/lib/libopenzwave.so
 
 # Install all modules
-# Install newer version of serialport due compiler error
 # Force build of openzwave-shared, otherwise seems to skip the .node addon compilation
 # Run build to make all html files
 RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
   export MAKEFLAGS="-j$((CORES+1)) -l${CORES}"; \
-  npm install serialport@8.0.5 --save && \
-  npm install -g @zeit/ncc && \
   npm install && \
   npm build node_modules/openzwave-shared/ && \
   npm run build
