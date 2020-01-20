@@ -35,6 +35,8 @@ ENV VERSION=2.1.0
 
 # Add unprivileged user
 RUN echo "zwave2mqtt:x:1000:1000:zwave2mqtt:/:" > /etc_passwd
+# Add to dailout as secondary group (20)
+RUN echo "dailout:x:20:zwave2mqtt" > /etc_group
 
 # eudev: needed for udevadm binary
 RUN apk --no-cache add \
@@ -100,6 +102,7 @@ RUN nexe --build --target alpine \
 
 # # Copy the unprivileged user
 # COPY --from=builder /etc_passwd /etc/passwd
+# COPY --from=builder /etc_group /etc/group
 
 # # Serialport is using the udevadm binary
 # COPY --from=builder /bin/udevadm /bin/udevadm
@@ -110,7 +113,7 @@ RUN nexe --build --target alpine \
 # # https://github.com/serialport/node-serialport/blob/master/packages/bindings/lib/linux.js#L2
 # COPY --from=builder /lib/ld-musl-*.so.1 /lib/
 # COPY --from=builder \
-#   /usr/lib/libstdc++.so.6.* \
+#   /usr/lib/libstdc++.so.6 \
 #   /usr/lib/libgcc_s.so.1 \
 #   /usr/lib/
 
