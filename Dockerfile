@@ -5,7 +5,7 @@ ARG ARCHITECTURE
 FROM multiarch/alpine:${ARCHITECTURE}-v3.11 as openzwave-builder
 
 # See old.openzwave.com/downloads/ for latest
-ENV VERSION=1.6.992
+ENV VERSION=1.6.1038
 
 # coreutils: needed for openzwave compile
 RUN apk --no-cache add \
@@ -31,7 +31,7 @@ RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
 #######################################################################################################################
 FROM lansible/nexe:4.0.0-beta.3-${ARCHITECTURE} as builder
 
-ENV VERSION=2.1.0
+ENV VERSION=2.2.0
 
 # Add unprivileged user
 RUN echo "zwave2mqtt:x:1000:1000:zwave2mqtt:/:" > /etc_passwd
