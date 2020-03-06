@@ -5,7 +5,7 @@ ARG ARCHITECTURE
 FROM multiarch/alpine:${ARCHITECTURE}-v3.11 as openzwave-builder
 
 # See old.openzwave.com/downloads/ for latest
-ENV VERSION=1.6.1038
+ENV VERSION=1.6.1051
 
 # coreutils: needed for openzwave compile
 RUN apk --no-cache add \
@@ -69,83 +69,75 @@ RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
   npm build node_modules/openzwave-shared/ && \
   npm run build
 
-# TODO: remove after testing!
-COPY --from=openzwave-builder \
-  /usr/local/lib/libopenzwave.so.1.* \
-  /lib/
-COPY examples/compose/config/settings.json /config/settings.json
-ENV ZWAVE2MQTT_CONFIG=/config/settings.json \
-    ZWAVE2MQTT_DATA=/data
-# Remove until here
-
 # Package the binary
 # Create /data to copy into final stage
 RUN nexe --build --target alpine \
   --resource lib \
   --resource config \
   --resource hass \
-  --output zwave2mqtt app.js && \
+  --resource app.js \
+  --output zwave2mqtt bin/www && \
   mkdir /data
 
 
 #######################################################################################################################
 # Final scratch image
 #######################################################################################################################
-# FROM scratch
+FROM scratch
 
-# # Set env vars for persitance
-# ENV ZWAVE2MQTT_CONFIG=/config/settings.json \
-#     ZWAVE2MQTT_DATA=/data
+# Set env vars for persitance
+ENV ZWAVE2MQTT_CONFIG=/config/settings.json \
+    ZWAVE2MQTT_DATA=/data
 
-# # Add description
-# LABEL org.label-schema.description="Zwave2MQTT as single binary in a scratch container"
+# Add description
+LABEL org.label-schema.description="Zwave2MQTT as single binary in a scratch container"
 
-# # Copy the unprivileged user
-# COPY --from=builder /etc_passwd /etc/passwd
-# COPY --from=builder /etc_group /etc/group
+# Copy the unprivileged user
+COPY --from=builder /etc_passwd /etc/passwd
+COPY --from=builder /etc_group /etc/group
 
-# # Serialport is using the udevadm binary
-# COPY --from=builder /bin/udevadm /bin/udevadm
+# Serialport is using the udevadm binary
+COPY --from=builder /bin/udevadm /bin/udevadm
 
-# # Copy needed libs(libstdc++.so, libgcc_s.so) for nodejs since it is partially static
-# # Copy linker to be able to use them (lib/ld-musl)
-# # Can't be fullly static since @serialport uses a C++ node addon
-# # https://github.com/serialport/node-serialport/blob/master/packages/bindings/lib/linux.js#L2
-# COPY --from=builder /lib/ld-musl-*.so.1 /lib/
-# COPY --from=builder \
-#   /usr/lib/libstdc++.so.6 \
-#   /usr/lib/libgcc_s.so.1 \
-#   /usr/lib/
+# Copy needed libs(libstdc++.so, libgcc_s.so) for nodejs since it is partially static
+# Copy linker to be able to use them (lib/ld-musl)
+# Can't be fullly static since @serialport uses a C++ node addon
+# https://github.com/serialport/node-serialport/blob/master/packages/bindings/lib/linux.js#L2
+COPY --from=builder /lib/ld-musl-*.so.1 /lib/
+COPY --from=builder \
+  /usr/lib/libstdc++.so.6 \
+  /usr/lib/libgcc_s.so.1 \
+  /usr/lib/
 
-# # Adds openzwave library
-# # libopenzwave needs to have the .1.* version!
-# COPY --from=openzwave-builder \
-#   /usr/local/lib/libopenzwave.so.1.* \
-#   /lib/
+# Adds openzwave library
+# libopenzwave needs to have the .1.* version!
+COPY --from=openzwave-builder \
+  /usr/local/lib/libopenzwave.so.1.* \
+  /lib/
 
-# # Copy zwave2mqtt binary
-# COPY --from=builder /zwave2mqtt/zwave2mqtt /zwave2mqtt/zwave2mqtt
+# Copy zwave2mqtt binary
+COPY --from=builder /zwave2mqtt/zwave2mqtt /zwave2mqtt/zwave2mqtt
 
-# # Copy openzwave definitions (location defined in settings.json)
-# COPY --from=openzwave-builder /usr/local/etc/openzwave/ /usr/local/etc/openzwave/
+# Copy openzwave definitions (location defined in settings.json)
+COPY --from=openzwave-builder /usr/local/etc/openzwave/ /usr/local/etc/openzwave/
 
-# # Add bindings.node for serialport
-# COPY --from=builder \
-#   /zwave2mqtt/node_modules/@serialport/bindings/build/Release/bindings.node \
-#   /zwave2mqtt/build/bindings.node
+# Add bindings.node for serialport
+COPY --from=builder \
+  /zwave2mqtt/node_modules/@serialport/bindings/build/Release/bindings.node \
+  /zwave2mqtt/build/bindings.node
 
-# # Add openzwave-shared module
-# COPY --from=builder \
-#   /zwave2mqtt/node_modules/openzwave-shared/build/Release/openzwave_shared.node \
-#   /zwave2mqtt/node_modules/openzwave-shared/build/Release/openzwave_shared.node
+# Add openzwave-shared module
+COPY --from=builder \
+  /zwave2mqtt/node_modules/openzwave-shared/build/Release/openzwave_shared.node \
+  /zwave2mqtt/node_modules/openzwave-shared/build/Release/openzwave_shared.node
 
-# # Create default data directory
-# # Will fail at runtime due missing the mkdir binary
-# COPY --from=builder /data /data
+# Create default data directory
+# Will fail at runtime due missing the mkdir binary
+COPY --from=builder /data /data
 
-# # Add example config, also create the /config dir
-# COPY examples/compose/config/settings.json ${ZWAVE2MQTT_CONFIG}
+# Add example config, also create the /config dir
+COPY examples/compose/config/settings.json ${ZWAVE2MQTT_CONFIG}
 
-# USER zwave2mqtt
-# WORKDIR /zwave2mqtt
-# ENTRYPOINT ["./zwave2mqtt"]
+USER zwave2mqtt
+WORKDIR /zwave2mqtt
+ENTRYPOINT ["./zwave2mqtt"]
