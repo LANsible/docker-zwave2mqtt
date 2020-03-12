@@ -72,12 +72,14 @@ RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
 # Package the binary
 # Create /data to copy into final stage
 RUN nexe --build --target alpine \
-  --resource lib \
-  --resource config \
-  --resource hass \
+  --resource lib/ \
+  --resource config/ \
+  --resource hass/ \
+  --resource dist/ \
+  --resource node_modules/socket.io-client/dist/socket.io.js \
   --resource app.js \
   --output zwave2mqtt bin/www && \
-  mkdir /data
+  mkdir /data /config
 
 
 #######################################################################################################################
@@ -133,11 +135,13 @@ COPY --from=builder \
 
 # Create default data directory
 # Will fail at runtime due missing the mkdir binary
-COPY --from=builder /data /data
+COPY --from=builder --chown=zwave2mqtt:0 /data /data
+COPY --from=builder --chown=zwave2mqtt:0 /config /config
 
 # Add example config, also create the /config dir
-COPY examples/compose/config/settings.json ${ZWAVE2MQTT_CONFIG}
+# COPY examples/compose/config/settings.json ${ZWAVE2MQTT_CONFIG}
 
+EXPOSE 8091
 USER zwave2mqtt
 WORKDIR /zwave2mqtt
 ENTRYPOINT ["./zwave2mqtt"]
