@@ -138,9 +138,6 @@ COPY --from=builder \
 COPY --from=builder --chown=zwave2mqtt:0 /data /data
 COPY --from=builder --chown=zwave2mqtt:0 /config /config
 
-# Add example config, also create the /config dir
-# COPY examples/compose/config/settings.json ${ZWAVE2MQTT_CONFIG}
-
 EXPOSE 8091
 USER zwave2mqtt
 WORKDIR /zwave2mqtt
