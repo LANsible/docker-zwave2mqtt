@@ -2,7 +2,7 @@ ARG ARCHITECTURE
 #######################################################################################################################
 # Openzwave build
 #######################################################################################################################
-FROM multiarch/alpine:${ARCHITECTURE}-v3.11 as openzwave-builder
+FROM multiarch/alpine:${ARCHITECTURE}-v3.12 as openzwave-builder
 
 # See old.openzwave.com/downloads/ for latest
 ENV VERSION=1.6.1133
