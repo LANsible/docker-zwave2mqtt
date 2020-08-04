@@ -65,7 +65,7 @@ COPY --from=openzwave-builder \
 # Run build to make all html files
 RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
   export MAKEFLAGS="-j$((CORES+1)) -l${CORES}"; \
-  npm install && \
+  npm ci && \
   npm build node_modules/openzwave-shared/ && \
   npm run build
 
@@ -76,9 +76,12 @@ RUN nexe --build --target alpine \
   --resource config/ \
   --resource hass/ \
   --resource dist/ \
+  --resource views/ \
   --resource node_modules/socket.io-client/dist/socket.io.js \
+  --resource node_modules/ejs \
   --resource app.js \
-  --output zwave2mqtt bin/www && \
+  --output zwave2mqtt \
+  bin/www && \
   mkdir /data /config
 
 
