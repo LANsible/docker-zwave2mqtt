@@ -31,7 +31,7 @@ RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
 #######################################################################################################################
 FROM lansible/nexe:4.0.0-beta.14-${ARCHITECTURE} as builder
 
-ENV VERSION=4.0.3
+ENV VERSION=4.0.4
 
 # Add unprivileged user
 RUN echo "zwave2mqtt:x:1000:1000:zwave2mqtt:/:" > /etc_passwd
