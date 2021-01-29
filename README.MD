@@ -1,5 +1,5 @@
 # Zwave2MQTT
-[![Build Status](https://cloud.drone.io/api/badges/LANsible/docker-zwave2mqtt/status.svg)](https://cloud.drone.io/LANsible/docker-zwave2mqtt)
+[![pipeline status](https://gitlab.com/lansible1/docker-zwave2mqtt/badges/master/pipeline.svg)](https://gitlab.com/lansible1/docker-zwave2mqtt/-/commits/master)
 [![Docker Pulls](https://img.shields.io/docker/pulls/lansible/zwave2mqtt.svg)](https://hub.docker.com/r/lansible/zwave2mqtt)
 [![Docker Version](https://images.microbadger.com/badges/version/lansible/zwave2mqtt:latest.svg)](https://microbadger.com/images/lansible/zwave2mqtt:latest)
 [![Docker Size/Layers](https://images.microbadger.com/badges/image/lansible/zwave2mqtt:latest.svg)](https://microbadger.com/images/lansible/zwave2mqtt:latest)
