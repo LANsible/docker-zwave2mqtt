@@ -5,7 +5,7 @@ ARG ARCHITECTURE
 FROM multiarch/alpine:${ARCHITECTURE}-v3.13 as openzwave-builder
 
 # See http://old.openzwave.com/downloads/ for latest
-ENV VERSION=1.6.1828
+ENV VERSION=1.6.1888
 
 # coreutils: needed for openzwave compile
 RUN apk --no-cache add \
@@ -29,7 +29,7 @@ RUN CORES=$(grep -c '^processor' /proc/cpuinfo); \
 #######################################################################################################################
 # Nexe packaging of binary
 #######################################################################################################################
-FROM lansible/nexe:master-${ARCHITECTURE} as builder
+FROM lansible/nexe:4.0.0-beta.18-${ARCHITECTURE} as builder
 
 ENV VERSION=4.1.1
 
